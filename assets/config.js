@@ -28,7 +28,7 @@ export const EVENEMENT = {
 
   // Liens des documents légaux du formulaire d'inscription
   lienReglement: '#',
-  lienDecharge: '#',
+  lienDecharge: 'https://docs.google.com/presentation/d/1JeFwdCrhcxxrKLsPluhkWY9hKdkmaFDkik8Gy9raIfI/preview?slide=id.g3ddd015aed5_0_100',
 };
 
 
