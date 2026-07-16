@@ -92,6 +92,11 @@ export const DECHARGE = {
   signature:   { x: 29.93, y: 92.53, taille: 3.2, couleur: '#111111',
                  largeurMax: 30 },   // % de la largeur — le cadre de gauche
 
-  policeTexte: 'Georgia, serif',
-  policeSignature: 'Dancing Script',
+  // Listes CSS completes, guillemets compris. decharge.js les utilise
+  // telles quelles : il n'ajoute jamais de guillemets autour.
+  // Une famille dont le nom contient un espace DOIT etre entre
+  // guillemets simples internes — sinon le canvas ignore la valeur en
+  // silence et dessine avec la police precedente.
+  policeTexte: 'Georgia, "Times New Roman", serif',
+  policeSignature: '"Dancing Script", cursive',
 };
