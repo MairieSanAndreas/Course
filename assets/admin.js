@@ -13,7 +13,7 @@ import {
   grouperParCourse, trierCourses, trierClassement, ecouter, surReveil, debounce,
   formatTemps, parseTemps, formatEcart, formatDate, formatDateCourte,
   formatHeure, formatDateHeure,
-  LIBELLE_STATUT, LIBELLE_TYPE, LIBELLE_CATEGORIE, echapper, notifier, messageErreur,
+  LIBELLE_STATUT, LIBELLE_TYPE, LIBELLE_CATEGORIE, echapper, celluleEquipe, notifier, messageErreur,
   confirmer, ouvrirModale,
 } from './api.js';
 
@@ -882,8 +882,8 @@ function vueParticipants() {
           ${lignes.map((p) => `
             <tr>
               <td><span class="dossard">${p.dossard ?? '—'}</span></td>
-              <td style="font-weight:600">${echapper(p.participant_nom)}
-                ${p.inscription_id ? '' : '<span class="mini-badge" style="margin-left:6px">Ajout manuel</span>'}</td>
+              <td>${celluleEquipe(p)}
+                ${p.inscription_id ? '' : '<span class="mini-badge">Ajout manuel</span>'}</td>
               <td style="color:var(--texte-2);font-size:13px">${echapper(p.entreprise_nom ?? '—')}</td>
               <td style="font-size:13px">${echapper(p.course_nom)}</td>
               <td style="font-family:var(--f-chrono);font-size:12px;color:var(--texte-3)">${p.ordre_depart ?? '—'}</td>
@@ -920,6 +920,7 @@ function vueParticipants() {
     { titre: 'Dossard', valeur: (p) => p.dossard ?? '' },
     { titre: 'Ordre de départ', valeur: (p) => p.ordre_depart ?? '' },
     { titre: 'Participant', valeur: (p) => p.participant_nom },
+    { titre: 'Pilotes', valeur: (p) => p.pilotes ?? '' },
     { titre: 'Entreprise', valeur: (p) => p.entreprise_nom ?? '' },
     { titre: 'Position', valeur: (p) => p.position ?? '' },
     { titre: 'Temps', valeur: (p) => (p.abandon ? 'ABANDON' : p.temps_ms != null ? formatTemps(p.temps_ms) : '') },
@@ -953,6 +954,14 @@ function vueParticipants() {
   });
 }
 
+/* « Prénom Nom » en solo, « Prénom Nom & Prénom Nom » à deux.
+   Les téléphones ne sortent jamais d'ici : la colonne est publique. */
+function pilotesDepuisInscription(i) {
+  const p1 = `${i.prenom} ${i.nom}`.trim();
+  const p2 = i.p2_prenom && i.p2_nom ? `${i.p2_prenom} ${i.p2_nom}`.trim() : '';
+  return p2 ? `${p1} & ${p2}` : p1;
+}
+
 function modaleParticipant(participant) {
   const nouveau = !participant;
 
@@ -970,7 +979,8 @@ function modaleParticipant(participant) {
         <select id="p-inscription">
           <option value="">— Saisie manuelle —</option>
           ${dispo.map((i) => `<option value="${i.id}"
-            data-nom="${echapper(i.nom_equipe)}" data-ent="${i.entreprise_id ?? ''}">
+            data-nom="${echapper(i.nom_equipe)}" data-ent="${i.entreprise_id ?? ''}"
+            data-pilotes="${echapper(pilotesDepuisInscription(i))}">
             ${echapper(i.nom_equipe)} — ${echapper(i.prenom)} ${echapper(i.nom)}</option>`).join('')}
         </select>
         <p class="aide">${dispo.length} inscription(s) validée(s) pas encore engagée(s).</p>
@@ -982,9 +992,17 @@ function modaleParticipant(participant) {
       </div>
 
       <div class="champ">
-        <label for="p-nom">Nom affiché *</label>
+        <label for="p-nom">Nom d'équipe *</label>
         <input type="text" id="p-nom" value="${echapper(participant?.participant_nom ?? '')}" maxlength="60">
-        <p class="aide">Nom d'équipe annoncé et affiché au classement.</p>
+        <p class="aide">Annoncé et affiché en gros au classement.</p>
+      </div>
+
+      <div class="champ">
+        <label for="p-pilotes">Pilotes</label>
+        <input type="text" id="p-pilotes" value="${echapper(participant?.pilotes ?? '')}" maxlength="80"
+               placeholder="Prénom Nom & Prénom Nom">
+        <p class="aide">Affiché en petit sous le nom d'équipe, côté public.
+           Rempli tout seul depuis l'inscription. ⚠️ Jamais de téléphone ici.</p>
       </div>
 
       <div class="champ">
@@ -1019,6 +1037,7 @@ function modaleParticipant(participant) {
 
       const donnees = {
         course_id, nom,
+        pilotes: $('#p-pilotes', corps).value.trim() || null,
         entreprise_id: $('#p-entreprise', corps).value || null,
         dossard: $('#p-dossard', corps).value ? Number($('#p-dossard', corps).value) : null,
         ordre_depart: $('#p-ordre', corps).value ? Number($('#p-ordre', corps).value) : null,
@@ -1043,6 +1062,7 @@ function modaleParticipant(participant) {
       const opt = sel.selectedOptions[0];
       if (!opt.value) return;
       $('#p-nom').value = opt.dataset.nom;
+      $('#p-pilotes').value = opt.dataset.pilotes || '';
       $('#p-entreprise').value = opt.dataset.ent || '';
     };
   }
@@ -1142,6 +1162,7 @@ function blocSaisie(c, lignes) {
         <span class="dossard">${l.dossard ?? '—'}</span>
         <span class="saisie-participant">${echapper(l.participant_nom)}
           ${l.entreprise_nom ? `<span style="color:var(--texte-3);font-weight:400"> · ${echapper(l.entreprise_nom)}</span>` : ''}
+          ${l.pilotes ? `<div class="pilotes">${echapper(l.pilotes)}</div>` : ''}
         </span>
         <input type="text" class="chrono-saisie saisie-champ" data-temps="${l.participant_id}"
                value="${l.abandon ? '' : (l.temps_ms != null ? formatTemps(l.temps_ms) : '')}"
@@ -1333,7 +1354,7 @@ function vueClassements() {
             <tr class="${l.abandon ? 'est-abandon' : ''} ${pos ? `rang-${pos}` : ''}" data-cle="a-${l.participant_id}">
               <td class="pos">${pos ?? '—'}</td>
               <td><span class="dossard">${l.dossard ?? '—'}</span></td>
-              <td style="font-weight:600">${echapper(l.participant_nom)}</td>
+              <td>${celluleEquipe(l)}</td>
               <td style="color:var(--texte-2);font-size:13px">${echapper(l.entreprise_nom ?? '—')}</td>
               <td style="font-size:13px;color:var(--texte-2)">
                 ${echapper(l.course_nom)}
@@ -1369,6 +1390,7 @@ function vueClassements() {
     { titre: 'Position', valeur: (l) => l.position ?? '' },
     { titre: 'Dossard', valeur: (l) => l.dossard ?? '' },
     { titre: 'Participant', valeur: (l) => l.participant_nom },
+    { titre: 'Pilotes', valeur: (l) => l.pilotes ?? '' },
     { titre: 'Entreprise', valeur: (l) => l.entreprise_nom ?? '' },
     { titre: 'Temps', valeur: (l) => (l.abandon ? 'ABANDON' : formatTemps(l.temps_ms)) },
     { titre: 'Millisecondes', valeur: (l) => l.temps_ms ?? '' },
