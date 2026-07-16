@@ -295,5 +295,68 @@ body { overflow: hidden; height: 100vh; }
 </div>
 
 <script type="module" src="assets/live.js"></script>
+
+<!-- =====================================================================
+     FILET DE DIAGNOSTIC
+     Ce script n'est PAS un module : il s'execute toujours, meme si le
+     module principal echoue a se charger (fichier manquant, erreur de
+     syntaxe, import casse). Sans lui, une page dont les ecrans sont
+     tous « hidden » reste noire et muette.
+     ===================================================================== -->
+<script>
+(function () {
+  var vu = [];
+
+  function afficher(titre, detail) {
+    if (document.getElementById('filet-erreur')) return;
+    var d = document.createElement('div');
+    d.id = 'filet-erreur';
+    d.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#0E0E11;'
+      + 'color:#E9E7E3;font:14px/1.6 system-ui,sans-serif;padding:32px;overflow:auto';
+    d.innerHTML = '<div style="max-width:640px;margin:8vh auto">'
+      + '<div style="color:#D4AF37;font-weight:700;letter-spacing:.2em;'
+      + 'text-transform:uppercase;font-size:12px;margin-bottom:16px">Mairie de San Andréas</div>'
+      + '<h1 style="font-size:20px;margin-bottom:12px">' + titre + '</h1>'
+      + '<p style="color:#9C9BA5;margin-bottom:20px">La page n\'a pas pu démarrer. '
+      + 'Le détail ci-dessous indique quoi corriger.</p>'
+      + '<pre style="background:#08080A;border:1px solid #2A2A33;border-radius:6px;'
+      + 'padding:16px;font-size:12px;color:#F87171;white-space:pre-wrap;'
+      + 'word-break:break-all">' + detail + '</pre>'
+      + '<p style="color:#66656F;font-size:12px;margin-top:20px">'
+      + 'Causes fréquentes : un fichier de assets/ absent ou mal nommé (la casse '
+      + 'compte sur GitHub Pages), ou config.js incomplet.</p></div>';
+    document.body.appendChild(d);
+  }
+
+  // Erreurs de chargement de <script> et de ressources
+  window.addEventListener('error', function (e) {
+    if (e.target && e.target.tagName === 'SCRIPT') {
+      vu.push('Fichier introuvable ou illisible : ' + (e.target.src || '?'));
+      afficher('Un fichier manque', vu.join('\n'));
+    } else if (e.message) {
+      vu.push(e.message + (e.filename ? '\n  ' + e.filename + ':' + e.lineno : ''));
+    }
+  }, true);
+
+  window.addEventListener('unhandledrejection', function (e) {
+    vu.push('Promesse rejetée : ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+
+  // Filet final : si rien n'est visible au bout de 5 s, on parle.
+  setTimeout(function () {
+    if (document.getElementById('filet-erreur')) return;
+    var visible = Array.prototype.some.call(
+      document.querySelectorAll('main, .app, .connexion, .live'),
+      function (el) { return el.offsetParent !== null; });
+    if (!visible) {
+      afficher('La page n\'a pas démarré',
+        vu.length ? vu.join('\n') : 'Aucune erreur JavaScript remontée.\n\n'
+        + 'Ouvre la console (F12) pour le détail, et vérifie que tous les\n'
+        + 'fichiers de assets/ sont bien en ligne — notamment decharge.js.');
+    }
+  }, 5000);
+})();
+</script>
+
 </body>
 </html>
