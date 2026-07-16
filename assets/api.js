@@ -230,6 +230,13 @@ export function grouperParCourse(lignes) {
    5. UI — notifications, modales, échappement
    ===================================================================== */
 
+/* Nom d'équipe + pilotes en dessous. Partagé par le site public et le
+   panel, pour que les deux affichent exactement la même chose. */
+export function celluleEquipe(ligne) {
+  return `<div style="font-weight:600">${echapper(ligne.participant_nom)}</div>`
+    + (ligne.pilotes ? `<div class="pilotes">${echapper(ligne.pilotes)}</div>` : '');
+}
+
 export function echapper(txt) {
   const d = document.createElement('div');
   d.textContent = txt ?? '';
