@@ -1,521 +1,414 @@
 /* =====================================================================
-   SITE PUBLIC
-   Onglets : inscription · programme des courses · classement général.
-   Tout se met à jour sans rechargement, via Supabase Realtime.
+   PANEL ADMINISTRATEUR — styles spécifiques
+   Complète style.css, ne le remplace pas.
    ===================================================================== */
-
-import {
-  db, chargerCourses, chargerParticipants, chargerEntreprises, chargerClassementGeneral,
-  grouperParCourse, trierCourses, trierClassement, ecouter, surReveil, debounce,
-  formatTemps, formatEcart, formatDate, formatDateCourte, formatHeure,
-  LIBELLE_STATUT, LIBELLE_TYPE, echapper, celluleEquipe, notifier, messageErreur,
-  memoriserPositions, animerVersNouvellesPositions,
-} from './api.js';
-import { EVENEMENT } from './config.js';
-import { telechargerDecharge, pilotesDeLInscription } from './decharge.js';
-
-/* État local — reflet de la base, jamais la source de vérité. */
-const etat = {
-  courses: [],
-  participants: [],
-  entreprises: [],
-  general: [],
-  ouvertes: new Set(),   // ids des courses dépliées
-  categorie: 'solo',
-};
-
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
-
 
 /* =====================================================================
-   1. DÉMARRAGE
+   1. CONNEXION
    ===================================================================== */
 
-async function demarrer() {
-  appliquerConfig();
-  brancherOnglets();
-  brancherFormulaire();
-  brancherFiltres();
-
-  await rafraichir();
-
-  // Temps réel : la moindre écriture en base redessine les vues.
-  const redessiner = debounce(rafraichir, 200);
-  ecouter(
-    ['courses', 'participants', 'resultats', 'entreprises'],
-    redessiner,
-    (connecte) => {
-      const t = $('#temoin-direct');
-      t.classList.toggle('actif', connecte);
-      t.textContent = connecte ? 'En direct' : 'Hors ligne';
-    },
-  );
-
-  // Un onglet mis en veille perd son WebSocket sans prévenir.
-  surReveil(rafraichir);
+.connexion {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--e4);
 }
 
-function appliquerConfig() {
-  $('#sous-titre').textContent = `${EVENEMENT.lieu} — ${EVENEMENT.date}`;
-  $('#pied-event').textContent = `${EVENEMENT.nom} — ${EVENEMENT.organisation}`;
-  $('#lien-reglement').href = EVENEMENT.lienReglement;
-  $('#lien-decharge').href = EVENEMENT.lienDecharge;
-  document.title = `${EVENEMENT.nom} — ${EVENEMENT.lieu} | ${EVENEMENT.organisation}`;
+.connexion-carte {
+  width: 100%;
+  max-width: 380px;
+  background: var(--noir-2);
+  border: 1px solid var(--trait);
+  border-radius: var(--r-l);
+  padding: var(--e6);
+  box-shadow: var(--ombre);
 }
 
-async function rafraichir() {
-  try {
-    const [courses, participants, entreprises, general] = await Promise.all([
-      chargerCourses(),
-      chargerParticipants(),
-      chargerEntreprises(),
-      chargerClassementGeneral(),
-    ]);
-    etat.courses = courses;
-    etat.participants = participants;
-    etat.entreprises = entreprises;
-    etat.general = general;
+.connexion-logo { text-align: center; margin-bottom: var(--e6); }
+.connexion-logo img { height: 52px; margin-bottom: var(--e3); }
 
-    dessinerCourses();
-    dessinerGeneral();
-    remplirSelects();
-  } catch (e) {
-    notifier(messageErreur(e), 'erreur');
-  }
+.connexion-titre {
+  font-family: var(--f-titre);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--or);
 }
 
+.connexion-sous {
+  font-size: 12px;
+  color: var(--texte-3);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
 
 /* =====================================================================
-   2. ONGLETS
+   2. CHÂSSIS
    ===================================================================== */
 
-function brancherOnglets() {
-  $$('.onglet').forEach((btn) => {
-    btn.onclick = () => afficherOnglet(btn.dataset.onglet);
-  });
+.app { display: grid; grid-template-columns: 236px 1fr; min-height: 100vh; }
 
-  // Lien direct : index.html#courses
-  const cible = location.hash.slice(1);
-  if (['inscription', 'courses', 'classement'].includes(cible)) afficherOnglet(cible);
+.cote {
+  background: var(--noir-0);
+  border-right: 1px solid var(--trait);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
-function afficherOnglet(nom) {
-  $$('.onglet').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.onglet === nom)));
-  ['inscription', 'courses', 'classement'].forEach((v) => {
-    $(`#vue-${v}`).hidden = v !== nom;
-  });
-  history.replaceState(null, '', `#${nom}`);
+.cote-tete {
+  padding: var(--e5) var(--e4);
+  border-bottom: 1px solid var(--trait);
 }
 
+.cote-tete .titre-msa { font-size: 12px; letter-spacing: 0.2em; }
+.cote-tete p { font-size: 11px; color: var(--texte-3); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+
+.cote-nav { padding: var(--e3) var(--e2); flex: 1; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  width: 100%;
+  padding: 10px var(--e3);
+  border-radius: var(--r-m);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-3);
+  text-align: left;
+  transition: all 0.15s;
+  margin-bottom: 2px;
+}
+.nav-item:hover { color: var(--texte); background: var(--noir-2); }
+.nav-item[aria-current='true'] { color: var(--or); background: var(--or-voile); }
+
+.nav-item .compteur {
+  margin-left: auto;
+  font-family: var(--f-chrono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 100px;
+  background: var(--noir-3);
+  color: var(--texte-2);
+}
+.nav-item[aria-current='true'] .compteur { background: var(--or); color: var(--noir-0); }
+
+.nav-titre {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--texte-3);
+  padding: var(--e4) var(--e3) var(--e2);
+  opacity: 0.6;
+}
+
+.cote-pied {
+  padding: var(--e4);
+  border-top: 1px solid var(--trait);
+}
+
+.compte { display: flex; align-items: center; gap: var(--e3); margin-bottom: var(--e3); }
+
+.compte-jeton {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--or-voile);
+  border: 1px solid var(--or-sombre);
+  display: grid;
+  place-items: center;
+  font-family: var(--f-titre);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--or);
+  flex-shrink: 0;
+}
+
+.compte-nom { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.compte-role { font-size: 10px; color: var(--texte-3); letter-spacing: 0.14em; text-transform: uppercase; }
+
+.principal { min-width: 0; }
+
+.barre {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e4) var(--e5);
+  border-bottom: 1px solid var(--trait);
+  background: var(--noir-1);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+
+.barre h1 {
+  font-family: var(--f-titre);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--texte);
+}
+
+.contenu { padding: var(--e5); }
 
 /* =====================================================================
-   3. FORMULAIRE D'INSCRIPTION
+   3. TABLEAU DE BORD
    ===================================================================== */
 
-function brancherFormulaire() {
-  $$('.cat').forEach((btn) => {
-    btn.onclick = () => {
-      etat.categorie = btn.dataset.cat;
-      $$('.cat').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
-      // Duo et entreprise engagent deux personnes ; solo, une seule.
-      $('#bloc-p2').hidden = etat.categorie === 'solo';
-      $('#bloc-entreprise').hidden = etat.categorie !== 'entreprise';
-    };
-  });
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--e3); }
 
-  $('#btn-inscrire').onclick = envoyerInscription;
-
-  $('#btn-nouvelle-inscription').onclick = () => {
-    $('#inscription-ok').hidden = true;
-    $('#inscription-form').hidden = false;
-    viderFormulaire();
-  };
+.stat {
+  background: var(--noir-2);
+  border: 1px solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e4);
 }
 
-function remplirSelects() {
-  // Entreprises du formulaire
-  const sel = $('#i-entreprise');
-  const garde = sel.value;
-  sel.innerHTML = '<option value="">— Sélectionner —</option>' +
-    etat.entreprises
-      .filter((e) => e.active)
-      .map((e) => `<option value="${e.id}">${echapper(e.nom)}</option>`)
-      .join('');
-  sel.value = garde;
-
-  // Filtres du classement général
-  const fc = $('#f-course');
-  const gardeC = fc.value;
-  fc.innerHTML = '<option value="">Toutes</option>' +
-    trierCourses(etat.courses)
-      .map((c) => `<option value="${c.id}">${echapper(c.nom)}</option>`)
-      .join('');
-  fc.value = gardeC;
-
-  const fe = $('#f-entreprise');
-  const gardeE = fe.value;
-  fe.innerHTML = '<option value="">Toutes</option>' +
-    etat.entreprises.map((e) => `<option value="${e.id}">${echapper(e.nom)}</option>`).join('');
-  fe.value = gardeE;
-
-  const fd = $('#f-date');
-  const gardeD = fd.value;
-  const dates = [...new Set(etat.courses.map((c) => c.date_course))].sort();
-  fd.innerHTML = '<option value="">Toutes</option>' +
-    dates.map((d) => `<option value="${d}">${formatDateCourte(d)}</option>`).join('');
-  fd.value = gardeD;
+.stat-val {
+  font-family: var(--f-chrono);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--or);
 }
 
-function viderFormulaire() {
-  ['i-prenom', 'i-nom', 'i-tel', 'i-equipe', 'i-p2-prenom', 'i-p2-nom', 'i-p2-tel']
-    .forEach((id) => { $(`#${id}`).value = ''; $(`#${id}`).removeAttribute('aria-invalid'); });
-  ['i-costume', 'i-reglement', 'i-decharge'].forEach((id) => { $(`#${id}`).checked = false; });
-  $('#i-entreprise').value = '';
-  $('#i-erreur').hidden = true;
+.stat-lib {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--texte-3);
+  margin-top: 8px;
 }
 
-/* Validation côté client : elle rend le formulaire agréable.
-   Elle ne protège rien — les contraintes de la base et les policies RLS
-   s'en chargent, et elles, on ne peut pas les contourner. */
-function validerFormulaire() {
-  const erreurs = [];
-  const requis = (id, libelle) => {
-    const el = $(`#${id}`);
-    const vide = !el.value.trim();
-    el.setAttribute('aria-invalid', String(vide));
-    if (vide) erreurs.push(libelle);
-    return !vide;
-  };
-
-  requis('i-prenom', 'Prénom');
-  requis('i-nom', 'Nom');
-  requis('i-tel', 'Téléphone');
-  requis('i-equipe', "Nom d'équipe");
-
-  if (etat.categorie !== 'solo') {
-    requis('i-p2-prenom', 'Prénom du second participant');
-    requis('i-p2-nom', 'Nom du second participant');
-    requis('i-p2-tel', 'Téléphone du second participant');
-  }
-  if (etat.categorie === 'entreprise') requis('i-entreprise', 'Entreprise');
-
-  if (!$('#i-reglement').checked) erreurs.push('Acceptation du règlement');
-  if (!$('#i-decharge').checked) erreurs.push('Acceptation de la décharge');
-
-  return erreurs;
-}
-
-function proposerDecharge(pilotes, date) {
-  const zone = $('#decharge-zone');
-  zone.innerHTML = '';
-
-  for (const p of pilotes) {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-or';
-    btn.textContent = pilotes.length > 1
-      ? `Décharge — ${p.prenom} ${p.nom}`
-      : 'Télécharger ma décharge';
-    btn.onclick = async () => {
-      btn.disabled = true;
-      try {
-        await telechargerDecharge({ ...p, date });
-      } catch (e) {
-        notifier(e.message, 'erreur');
-      } finally {
-        btn.disabled = false;
-      }
-    };
-    zone.appendChild(btn);
-  }
-}
-
-async function envoyerInscription() {
-  const erreurs = validerFormulaire();
-  const zone = $('#i-erreur');
-
-  if (erreurs.length) {
-    zone.hidden = false;
-    zone.textContent = `À compléter : ${erreurs.join(', ')}.`;
-    zone.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
-  zone.hidden = true;
-
-  const btn = $('#btn-inscrire');
-  btn.disabled = true;
-  btn.textContent = 'Envoi…';
-
-  const duo = etat.categorie !== 'solo';
-
-  const { error } = await db.from('inscriptions').insert({
-    prenom: $('#i-prenom').value.trim(),
-    nom: $('#i-nom').value.trim(),
-    telephone: $('#i-tel').value.trim(),
-    nom_equipe: $('#i-equipe').value.trim(),
-    costume: $('#i-costume').checked,
-    categorie: etat.categorie,
-    entreprise_id: etat.categorie === 'entreprise' ? $('#i-entreprise').value : null,
-    p2_prenom: duo ? $('#i-p2-prenom').value.trim() : null,
-    p2_nom: duo ? $('#i-p2-nom').value.trim() : null,
-    p2_telephone: duo ? $('#i-p2-tel').value.trim() : null,
-    reglement_ok: true,
-    decharge_ok: true,
-    statut: 'en_attente',
-    decharge_validee: false,
-  });
-
-  btn.disabled = false;
-  btn.textContent = "Envoyer l'inscription";
-
-  if (error) {
-    zone.hidden = false;
-    zone.textContent = messageErreur(error);
-    return;
-  }
-
-  // RLS interdit au public de relire l'inscription : on ne peut pas
-  // récupérer created_at. On prend l'heure locale d'envoi — écart de
-  // quelques millisecondes, sans conséquence. Côté panel, c'est bien
-  // created_at qui fait foi.
-  proposerDecharge(pilotesDeLInscription({
-    prenom: $('#i-prenom').value.trim(),
-    nom: $('#i-nom').value.trim(),
-    p2_prenom: duo ? $('#i-p2-prenom').value.trim() : null,
-    p2_nom: duo ? $('#i-p2-nom').value.trim() : null,
-  }), new Date());
-
-  $('#inscription-form').hidden = true;
-  $('#inscription-ok').hidden = false;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
+.stat-detail { font-size: 12px; color: var(--texte-2); margin-top: 6px; font-weight: 600; }
 
 /* =====================================================================
-   4. PROGRAMME DES COURSES
+   4. TABLES DE GESTION
    ===================================================================== */
 
-function dessinerCourses() {
-  const zone = $('#liste-courses');
-  const courses = trierCourses(etat.courses);
-
-  if (!courses.length) {
-    zone.innerHTML = `
-      <div class="vide">
-        <div class="vide-titre">Aucune course au programme</div>
-        <p>Le programme sera publié par l'organisation avant l'événement.</p>
-      </div>`;
-    return;
-  }
-
-  const positions = memoriserPositions(zone);
-  const parCourse = grouperParCourse(etat.participants);
-
-  zone.innerHTML = courses.map((c) => carteCourse(c, parCourse.get(c.id) ?? [])).join('');
-  animerVersNouvellesPositions(zone, positions);
-
-  // Dépliage / repliage
-  zone.querySelectorAll('[data-basculer]').forEach((btn) => {
-    btn.onclick = () => {
-      const id = btn.dataset.basculer;
-      etat.ouvertes.has(id) ? etat.ouvertes.delete(id) : etat.ouvertes.add(id);
-      dessinerCourses();
-    };
-  });
+.outils {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  margin-bottom: var(--e4);
+  flex-wrap: wrap;
 }
 
-function carteCourse(c, lignes) {
-  const ouverte = etat.ouvertes.has(c.id);
-  const nb = lignes.length;
-
-  return `
-  <article class="course ${c.statutAffiche}" data-cle="course-${c.id}">
-    <div class="course-tete">
-      <div style="flex:1;min-width:0">
-        <h3 class="course-nom">${echapper(c.nom)}</h3>
-        <div class="course-meta">
-          <span>${formatDate(c.date_course)}</span>
-          <span class="course-heure">${formatHeure(c.heure_depart)}</span>
-          <span class="badge-type ${c.type}">${LIBELLE_TYPE[c.type]}</span>
-          <span>${nb} participant${nb > 1 ? 's' : ''}</span>
-        </div>
-      </div>
-      <span class="pastille ${c.statutAffiche}">${LIBELLE_STATUT[c.statutAffiche]}</span>
-    </div>
-
-    ${c.description ? `<p class="course-desc">${echapper(c.description)}</p>` : ''}
-
-    ${nb ? `
-      <button class="btn btn-mini" data-basculer="${c.id}" style="margin-top:16px"
-              aria-expanded="${ouverte}">
-        ${ouverte ? 'Masquer' : (c.resultats_publies ? 'Voir le classement' : 'Voir les participants')}
-      </button>
-      ${ouverte ? blocResultats(c, lignes) : ''}
-    ` : ''}
-  </article>`;
+.recherche { position: relative; flex: 1; min-width: 180px; max-width: 320px; }
+.recherche input { padding-left: 34px; }
+.recherche::before {
+  content: '⌕';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--texte-3);
+  font-size: 17px;
+  pointer-events: none;
 }
 
-function blocResultats(c, lignes) {
-  const triees = trierClassement(lignes);
-  const publie = c.resultats_publies;
-  const meilleur = triees.find((l) => l.temps_ms != null)?.temps_ms ?? null;
-
-  // Verrou fermé : le public ne voit que la grille de départ.
-  // (Les temps ne sont même pas dans la réponse — RLS les a filtrés.)
-  if (!publie) {
-    return `
-      <table class="classement">
-        <thead>
-          <tr>
-            <th style="width:54px">N°</th>
-            <th>Participant</th>
-            <th class="masque-tel">Entreprise</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${triees.map((l) => `
-            <tr data-cle="p-${l.participant_id}">
-              <td><span class="dossard">${l.dossard ?? '—'}</span></td>
-              <td>${celluleEquipe(l)}</td>
-              <td class="masque-tel" style="color:var(--texte-2)">${echapper(l.entreprise_nom ?? '—')}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-      <div class="attente-resultats" style="margin-top:12px">
-        ${c.statut === 'terminee'
-          ? 'Résultats en cours de validation'
-          : 'Résultats publiés à l’issue de la course'}
-      </div>`;
-  }
-
-  return `
-    <table class="classement">
-      <thead>
-        <tr>
-          <th style="width:54px">Pos.</th>
-          <th style="width:54px">N°</th>
-          <th>Participant</th>
-          <th class="masque-tel">Entreprise</th>
-          <th style="text-align:right">Temps</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${triees.map((l) => ligneClassement(l, meilleur)).join('')}
-      </tbody>
-    </table>`;
+.tbl-enveloppe {
+  border: 1px solid var(--trait);
+  border-radius: var(--r-m);
+  overflow-x: auto;
+  background: var(--noir-2);
 }
 
-function ligneClassement(l, meilleur) {
-  const ecart = l.abandon ? '' : formatEcart(l.temps_ms, meilleur);
+.tbl { width: 100%; border-collapse: collapse; min-width: 640px; }
 
-  return `
-  <tr class="${l.abandon ? 'est-abandon' : ''} ${l.position ? `rang-${l.position}` : ''}"
-      data-cle="p-${l.participant_id}">
-    <td class="pos">${l.abandon ? '—' : (l.position ?? '—')}</td>
-    <td><span class="dossard">${l.dossard ?? '—'}</span></td>
-    <td>${celluleEquipe(l)}</td>
-    <td class="masque-tel" style="color:var(--texte-2)">${echapper(l.entreprise_nom ?? '—')}</td>
-    <td style="text-align:right">
-      ${l.abandon
-        ? '<span class="abandon-tag">Abandon</span>'
-        : `<span class="temps">${formatTemps(l.temps_ms)}</span>
-           ${ecart ? `<div style="font-size:11px;color:var(--texte-3);font-family:var(--f-chrono)">${ecart}</div>` : ''}`}
-    </td>
-  </tr>`;
+.tbl th {
+  text-align: left;
+  padding: var(--e3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--texte-3);
+  background: var(--noir-0);
+  border-bottom: 1px solid var(--trait);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
 }
 
+.tbl td {
+  padding: var(--e3);
+  border-bottom: 1px solid color-mix(in srgb, var(--trait) 50%, transparent);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr:hover { background: var(--noir-3); }
+
+.tbl .actions { display: flex; gap: 4px; justify-content: flex-end; }
+
+/* Décharge reçue : la ligne passe au vert. Repère visuel du terrain. */
+.tbl tr.decharge-ok { background: color-mix(in srgb, var(--succes) 7%, transparent); }
+.tbl tr.decharge-ok:hover { background: color-mix(in srgb, var(--succes) 12%, transparent); }
+.tbl tr.refusee { opacity: 0.45; }
+
+.mini-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: var(--r-s);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--trait-2);
+  color: var(--texte-2);
+}
+.mini-badge.ok    { border-color: color-mix(in srgb, var(--succes) 50%, transparent); color: #4ADE80; }
+.mini-badge.attente { border-color: color-mix(in srgb, var(--s-prochaine) 50%, transparent); color: var(--s-prochaine); }
+.mini-badge.ko    { border-color: color-mix(in srgb, var(--danger) 50%, transparent); color: #F87171; }
+.mini-badge.or    { border-color: var(--or-sombre); color: var(--or); }
+
+/* Statut modifiable dans le tableau. Il doit se lire comme un badge et
+   se comporter comme un menu — d'où les styles select par défaut,
+   entièrement réécrits ici. */
+.statut-inline {
+  width: auto;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: var(--r-s);
+  border: 1px solid var(--trait-2);
+  background: transparent;
+  color: var(--texte-2);
+  cursor: pointer;
+}
+.statut-inline:hover { background: var(--noir-0); }
+.statut-inline.validee    { border-color: color-mix(in srgb, var(--succes) 50%, transparent); color: #4ADE80; }
+.statut-inline.refusee    { border-color: color-mix(in srgb, var(--danger) 50%, transparent); color: #F87171; }
+.statut-inline.en_attente { border-color: color-mix(in srgb, var(--s-prochaine) 50%, transparent); color: var(--s-prochaine); }
 
 /* =====================================================================
-   5. CLASSEMENT GÉNÉRAL
+   5. SAISIE DES RÉSULTATS
    ===================================================================== */
 
-function brancherFiltres() {
-  ['#f-type', '#f-course', '#f-entreprise', '#f-date'].forEach((sel) => {
-    $(sel).onchange = dessinerGeneral;
-  });
+.saisie-course {
+  border: 1px solid var(--trait);
+  border-radius: var(--r-m);
+  background: var(--noir-2);
+  margin-bottom: var(--e4);
+  overflow: hidden;
 }
 
-function dessinerGeneral() {
-  const zone = $('#tableau-general');
+.saisie-tete {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e4);
+  border-bottom: 1px solid var(--trait);
+  flex-wrap: wrap;
+}
 
-  const fType = $('#f-type').value;
-  const fCourse = $('#f-course').value;
-  const fEnt = $('#f-entreprise').value;
-  const fDate = $('#f-date').value;
+.saisie-nom {
+  font-family: var(--f-titre);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
-  let lignes = etat.general.filter((l) => l.temps_ms != null || l.abandon);
-  if (fType) lignes = lignes.filter((l) => l.course_type === fType);
-  if (fCourse) lignes = lignes.filter((l) => l.course_id === fCourse);
-  if (fEnt) lignes = lignes.filter((l) => l.entreprise_id === fEnt);
-  if (fDate) lignes = lignes.filter((l) => l.date_course === fDate);
+.saisie-ligne {
+  display: grid;
+  grid-template-columns: 44px 1fr 150px 108px;
+  gap: var(--e3);
+  align-items: center;
+  padding: var(--e2) var(--e4);
+  border-bottom: 1px solid color-mix(in srgb, var(--trait) 40%, transparent);
+}
+.saisie-ligne:last-child { border-bottom: none; }
+.saisie-ligne input { padding: 8px 10px; font-size: 14px; }
+.saisie-ligne.abandonne .saisie-participant { opacity: 0.5; text-decoration: line-through; }
 
-  if (!lignes.length) {
-    zone.innerHTML = `
-      <div class="vide">
-        <div class="vide-titre">Aucun résultat</div>
-        <p>${etat.general.some((l) => l.temps_ms != null)
-          ? 'Aucun temps ne correspond à ces filtres. Élargis la sélection.'
-          : 'Les temps apparaîtront ici dès la publication des premiers résultats.'}</p>
-      </div>`;
-    return;
+.saisie-participant { font-weight: 600; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Bandeau de publication : l'état du verrou doit sauter aux yeux */
+.verrou {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e3) var(--e4);
+  font-size: 13px;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+.verrou.ferme  { background: color-mix(in srgb, var(--s-prochaine) 12%, transparent); color: var(--s-prochaine); border-top: 1px solid color-mix(in srgb, var(--s-prochaine) 30%, transparent); }
+.verrou.ouvert { background: color-mix(in srgb, var(--succes) 12%, transparent); color: #4ADE80; border-top: 1px solid color-mix(in srgb, var(--succes) 30%, transparent); }
+
+/* =====================================================================
+   6. HISTORIQUE
+   ===================================================================== */
+
+.journal { border-left: 1px solid var(--trait); margin-left: 7px; }
+
+.journal-item { position: relative; padding: 0 0 var(--e4) var(--e5); }
+
+.journal-item::before {
+  content: '';
+  position: absolute;
+  left: -5px; top: 5px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--trait-2);
+  border: 2px solid var(--noir-1);
+}
+.journal-item.creation::before    { background: var(--succes); }
+.journal-item.suppression::before { background: var(--danger); }
+.journal-item.publication_resultats::before { background: var(--or); }
+
+.journal-tete { display: flex; align-items: baseline; gap: var(--e2); flex-wrap: wrap; }
+.journal-action { font-size: 14px; font-weight: 600; }
+.journal-quand { font-family: var(--f-chrono); font-size: 11px; color: var(--texte-3); }
+.journal-qui { font-size: 12px; color: var(--or); font-weight: 600; }
+
+/* =====================================================================
+   7. RESPONSIVE — la barre latérale passe en haut
+   ===================================================================== */
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+
+  .cote {
+    position: static;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--trait);
   }
 
-  // Les positions du classement général sont recalculées après filtrage :
-  // filtrer sur les entreprises et garder « 7e » n'aurait aucun sens.
-  const triees = trierClassement(lignes);
-  const meilleur = triees.find((l) => l.temps_ms != null)?.temps_ms ?? null;
-  let rang = 0;
-  let dernierTemps = null;
-  let dernierRang = 0;
+  .cote-nav {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: var(--e2);
+    scrollbar-width: none;
+  }
+  .cote-nav::-webkit-scrollbar { display: none; }
 
-  const positions = memoriserPositions(zone);
+  .nav-item { white-space: nowrap; width: auto; margin: 0; }
+  .nav-titre { display: none; }
 
-  zone.innerHTML = `
-    <table class="classement">
-      <thead>
-        <tr>
-          <th style="width:54px">Pos.</th>
-          <th>Participant</th>
-          <th class="masque-tel">Entreprise</th>
-          <th class="masque-tel">Course</th>
-          <th style="text-align:right">Temps</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${triees.map((l) => {
-          let pos = null;
-          if (!l.abandon && l.temps_ms != null) {
-            rang++;
-            // Ex aequo : même temps, même place.
-            pos = l.temps_ms === dernierTemps ? dernierRang : rang;
-            dernierTemps = l.temps_ms;
-            dernierRang = pos;
-          }
-          const ecart = l.abandon ? '' : formatEcart(l.temps_ms, meilleur);
-          return `
-          <tr class="${l.abandon ? 'est-abandon' : ''} ${pos ? `rang-${pos}` : ''}"
-              data-cle="g-${l.participant_id}">
-            <td class="pos">${pos ?? '—'}</td>
-            <td>${celluleEquipe(l)}</td>
-            <td class="masque-tel" style="color:var(--texte-2)">${echapper(l.entreprise_nom ?? '—')}</td>
-            <td class="masque-tel" style="color:var(--texte-2);font-size:13px">${echapper(l.course_nom)}</td>
-            <td style="text-align:right">
-              ${l.abandon
-                ? '<span class="abandon-tag">Abandon</span>'
-                : `<span class="temps">${formatTemps(l.temps_ms)}</span>
-                   ${ecart ? `<div style="font-size:11px;color:var(--texte-3);font-family:var(--f-chrono)">${ecart}</div>` : ''}`}
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-    <p class="aide" style="margin-top:16px">
-      ${triees.filter((l) => !l.abandon).length} temps classé(s)${
-        triees.some((l) => l.abandon) ? ` · ${triees.filter((l) => l.abandon).length} abandon(s)` : ''}
-    </p>`;
+  .contenu { padding: var(--e4) var(--e3); }
+  .barre { padding: var(--e3) var(--e4); }
 
-  animerVersNouvellesPositions(zone, positions);
+  .saisie-ligne { grid-template-columns: 40px 1fr; gap: var(--e2); }
+  .saisie-ligne .saisie-champ { grid-column: 1 / -1; }
 }
-
-
-demarrer();
