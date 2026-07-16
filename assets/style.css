@@ -66,6 +66,13 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* L'attribut hidden doit l'emporter sur toute règle display de ce fichier.
+   Le navigateur applique [hidden] { display: none }, mais une règle
+   d'auteur comme .connexion { display: flex } la bat et l'élément
+   réapparaît. Sans cette ligne, l'écran de connexion et le panel
+   s'affichent en même temps. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
