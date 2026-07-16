@@ -8,7 +8,7 @@ import {
   db, chargerCourses, chargerParticipants, chargerEntreprises, chargerClassementGeneral,
   grouperParCourse, trierCourses, trierClassement, ecouter, surReveil, debounce,
   formatTemps, formatEcart, formatDate, formatDateCourte, formatHeure,
-  LIBELLE_STATUT, LIBELLE_TYPE, echapper, notifier, messageErreur,
+  LIBELLE_STATUT, LIBELLE_TYPE, echapper, celluleEquipe, notifier, messageErreur,
   memoriserPositions, animerVersNouvellesPositions,
 } from './api.js';
 import { EVENEMENT } from './config.js';
@@ -340,7 +340,7 @@ function blocResultats(c, lignes) {
           ${triees.map((l) => `
             <tr data-cle="p-${l.participant_id}">
               <td><span class="dossard">${l.dossard ?? '—'}</span></td>
-              <td style="font-weight:600">${echapper(l.participant_nom)}</td>
+              <td>${celluleEquipe(l)}</td>
               <td class="masque-tel" style="color:var(--texte-2)">${echapper(l.entreprise_nom ?? '—')}</td>
             </tr>`).join('')}
         </tbody>
@@ -377,7 +377,7 @@ function ligneClassement(l, meilleur) {
       data-cle="p-${l.participant_id}">
     <td class="pos">${l.abandon ? '—' : (l.position ?? '—')}</td>
     <td><span class="dossard">${l.dossard ?? '—'}</span></td>
-    <td style="font-weight:600">${echapper(l.participant_nom)}</td>
+    <td>${celluleEquipe(l)}</td>
     <td class="masque-tel" style="color:var(--texte-2)">${echapper(l.entreprise_nom ?? '—')}</td>
     <td style="text-align:right">
       ${l.abandon
@@ -460,7 +460,7 @@ function dessinerGeneral() {
           <tr class="${l.abandon ? 'est-abandon' : ''} ${pos ? `rang-${pos}` : ''}"
               data-cle="g-${l.participant_id}">
             <td class="pos">${pos ?? '—'}</td>
-            <td style="font-weight:600">${echapper(l.participant_nom)}</td>
+            <td>${celluleEquipe(l)}</td>
             <td class="masque-tel" style="color:var(--texte-2)">${echapper(l.entreprise_nom ?? '—')}</td>
             <td class="masque-tel" style="color:var(--texte-2);font-size:13px">${echapper(l.course_nom)}</td>
             <td style="text-align:right">
