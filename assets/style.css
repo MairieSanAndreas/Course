@@ -463,6 +463,19 @@ h1, h2, h3 { font-weight: 700; line-height: 1.2; }
 
 .temps { font-family: var(--f-chrono); font-weight: 700; font-variant-numeric: tabular-nums; }
 
+/* Noms des pilotes, sous le nom d'équipe. Assez lisible pour être lu,
+   assez discret pour que l'équipe reste l'information principale. */
+.pilotes {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--texte-3);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 32ch;
+}
+
 .abandon-tag {
   font-size: 11px;
   font-weight: 700;
