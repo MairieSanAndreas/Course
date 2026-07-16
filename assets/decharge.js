@@ -39,22 +39,12 @@ async function chargerFond() {
 /* Les polices doivent être réellement chargées avant le premier
    fillText, sinon le navigateur dessine avec une police de repli et le
    rendu est faux — silencieusement. */
-/* Le setter ctx.font IGNORE en silence une valeur invalide : la police
-   precedente reste en place et le rendu est faux sans le moindre
-   message. On verifie donc que la valeur a bien ete prise. */
-export function verifierPolice(valeur) {
-  const c = document.createElement('canvas').getContext('2d');
-  c.font = '10px sans-serif';
-  c.font = valeur;
-  return c.font !== '10px sans-serif';
-}
-
 async function chargerPolices(h) {
   const essais = [
-    `${Math.round(h * DECHARGE.participant.taille / 100)}px ${DECHARGE.policeTexte}`,
-    `bold ${Math.round(h * DECHARGE.participant.taille / 100)}px ${DECHARGE.policeTexte}`,
-    `${Math.round(h * DECHARGE.date.taille / 100)}px ${DECHARGE.policeTexte}`,
-    `${Math.round(h * DECHARGE.signature.taille / 100)}px ${DECHARGE.policeSignature}`,
+    `${Math.round(h * DECHARGE.participant.taille / 100)}px "${DECHARGE.policeTexte}"`,
+    `bold ${Math.round(h * DECHARGE.participant.taille / 100)}px "${DECHARGE.policeTexte}"`,
+    `${Math.round(h * DECHARGE.date.taille / 100)}px "${DECHARGE.policeTexte}"`,
+    `${Math.round(h * DECHARGE.signature.taille / 100)}px "${DECHARGE.policeSignature}"`,
   ];
   await Promise.all(essais.map((f) => document.fonts.load(f).catch(() => {})));
   await document.fonts.ready;
@@ -121,26 +111,26 @@ export async function genererDecharge({ prenom, nom, date }) {
   const p = DECHARGE.participant;
   const tp = Math.round(pc(p.taille, H));
   ligneCentree(ctx, [
-    { texte: DECHARGE.libelleParticipant, police: `${tp}px ${DECHARGE.policeTexte}`, couleur: p.couleur },
-    { texte: complet, police: `bold ${tp}px ${DECHARGE.policeTexte}`, couleur: p.couleur },
+    { texte: DECHARGE.libelleParticipant, police: `${tp}px "${DECHARGE.policeTexte}"`, couleur: p.couleur },
+    { texte: complet, police: `bold ${tp}px "${DECHARGE.policeTexte}"`, couleur: p.couleur },
   ], pc(p.x, L), pc(p.y, H));
 
   // --- Ligne d'horodatage ---
   const d = DECHARGE.date;
   const td = Math.round(pc(d.taille, H));
   ligneCentree(ctx, [
-    { texte: formatHorodatage(date), police: `${td}px ${DECHARGE.policeTexte}`, couleur: d.couleur },
+    { texte: formatHorodatage(date), police: `${td}px "${DECHARGE.policeTexte}"`, couleur: d.couleur },
   ], pc(d.x, L), pc(d.y, H));
 
   // --- Signature manuscrite ---
   const s = DECHARGE.signature;
   const ts = taillePourTenir(
     ctx, complet,
-    `__T__px ${DECHARGE.policeSignature}`,
+    `__T__px "${DECHARGE.policeSignature}"`,
     Math.round(pc(s.taille, H)),
     pc(s.largeurMax, L),
   );
-  ctx.font = `${ts}px ${DECHARGE.policeSignature}`;
+  ctx.font = `${ts}px "${DECHARGE.policeSignature}"`;
   ctx.fillStyle = s.couleur;
   ctx.textAlign = 'center';
   ctx.fillText(complet, pc(s.x, L), pc(s.y, H));
