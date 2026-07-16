@@ -9,7 +9,7 @@
      JetBrains Mono→ chronos (chiffres tabulaires, colonnes alignées)
    ===================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700;800&family=Dancing+Script:wght@600&display=swap');
 
 /* =====================================================================
    1. TOKENS
@@ -711,6 +711,47 @@ input[aria-invalid='true'], select[aria-invalid='true'] { border-color: var(--da
 }
 
 .modale-danger .modale-titre { color: #F87171; }
+
+/* =====================================================================
+   12b. APERÇU DE LA DÉCHARGE
+   ===================================================================== */
+
+.decharge-lot { display: grid; gap: var(--e4); }
+
+.decharge-item {
+  border: 1px solid var(--trait);
+  border-radius: var(--r-m);
+  overflow: hidden;
+  background: var(--noir-0);
+}
+
+.decharge-item canvas,
+.decharge-item img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+.decharge-pied {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e3);
+  border-top: 1px solid var(--trait);
+  flex-wrap: wrap;
+}
+
+.decharge-nom { font-weight: 700; font-size: 14px; }
+
+.decharge-note {
+  font-size: 12px;
+  color: var(--texte-3);
+  padding: var(--e3);
+  border: 1px dashed var(--trait);
+  border-radius: var(--r-m);
+  margin-bottom: var(--e4);
+}
 
 /* =====================================================================
    13. NOTIFICATIONS
