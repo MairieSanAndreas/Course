@@ -39,15 +39,49 @@ async function chargerFond() {
 /* Les polices doivent être réellement chargées avant le premier
    fillText, sinon le navigateur dessine avec une police de repli et le
    rendu est faux — silencieusement. */
+/* Applique une police EN VERIFIANT qu'elle a bien ete prise.
+
+   Le setter ctx.font ignore en silence toute valeur invalide : la police
+   precedente reste en place et le rendu part en « 10px sans-serif »
+   sans le moindre message. C'est exactement ce qui arrive si les
+   guillemets de config.js sont mal formes — bug deja vu, plus jamais.
+
+   On pose une sentinelle, on applique, et on verifie que ca a bouge. */
+const SENTINELLE = '10px sans-serif';
+
+function appliquerPolice(ctx, valeur) {
+  ctx.font = SENTINELLE;
+  ctx.font = valeur;
+  if (ctx.font === SENTINELLE && valeur.replace(/\s+/g, ' ').trim() !== SENTINELLE) {
+    throw new Error(
+      `Police refusée par le navigateur : « ${valeur} ». Vérifie policeTexte et ` +
+      `policeSignature dans config.js — ce sont des listes CSS, guillemets compris ` +
+      `(ex. 'Georgia, "Times New Roman", serif'). decharge.js n'en ajoute aucun.`,
+    );
+  }
+}
+
 async function chargerPolices(h) {
   const essais = [
-    `${Math.round(h * DECHARGE.participant.taille / 100)}px "${DECHARGE.policeTexte}"`,
-    `bold ${Math.round(h * DECHARGE.participant.taille / 100)}px "${DECHARGE.policeTexte}"`,
-    `${Math.round(h * DECHARGE.date.taille / 100)}px "${DECHARGE.policeTexte}"`,
-    `${Math.round(h * DECHARGE.signature.taille / 100)}px "${DECHARGE.policeSignature}"`,
+    `${Math.round(h * DECHARGE.participant.taille / 100)}px ${DECHARGE.policeTexte}`,
+    `bold ${Math.round(h * DECHARGE.participant.taille / 100)}px ${DECHARGE.policeTexte}`,
+    `${Math.round(h * DECHARGE.date.taille / 100)}px ${DECHARGE.policeTexte}`,
+    `${Math.round(h * DECHARGE.signature.taille / 100)}px ${DECHARGE.policeSignature}`,
   ];
   await Promise.all(essais.map((f) => document.fonts.load(f).catch(() => {})));
   await document.fonts.ready;
+
+  // La signature manuscrite vient de Google Fonts (@import dans style.css).
+  // Si elle n'est pas arrivee, le nom sortira en police systeme : correct
+  // mais pas manuscrit. Mieux vaut le dire que le laisser passer.
+  const m = DECHARGE.policeSignature.match(/"([^"]+)"|^([^,]+)/);
+  const famille = m && (m[1] || m[2] || '').trim();
+  if (famille && !document.fonts.check(`16px "${famille}"`)) {
+    console.warn(
+      `[décharge] La police « ${famille} » n'est pas chargée : la signature ` +
+      `sortira en police système. Vérifie l'@import en tête de style.css.`,
+    );
+  }
 }
 
 /* Dessine plusieurs fragments de polices différentes comme une seule
@@ -56,13 +90,13 @@ async function chargerPolices(h) {
    ensemble — sinon la ligne se décale dès que le nom est long. */
 function ligneCentree(ctx, fragments, cx, y) {
   const largeurs = fragments.map((f) => {
-    ctx.font = f.police;
+    appliquerPolice(ctx, f.police);
     return ctx.measureText(f.texte).width;
   });
   let x = cx - largeurs.reduce((a, b) => a + b, 0) / 2;
 
   fragments.forEach((f, i) => {
-    ctx.font = f.police;
+    appliquerPolice(ctx, f.police);
     ctx.fillStyle = f.couleur;
     ctx.fillText(f.texte, x, y);
     x += largeurs[i];
@@ -81,7 +115,7 @@ export function formatHorodatage(date) {
 function taillePourTenir(ctx, texte, police, taille, largeurMax) {
   let t = taille;
   for (let i = 0; i < 24; i++) {
-    ctx.font = police.replace('__T__', t);
+    appliquerPolice(ctx, police.replace('__T__', t));
     if (ctx.measureText(texte).width <= largeurMax) break;
     t -= Math.max(1, Math.round(taille * 0.04));
   }
@@ -111,26 +145,26 @@ export async function genererDecharge({ prenom, nom, date }) {
   const p = DECHARGE.participant;
   const tp = Math.round(pc(p.taille, H));
   ligneCentree(ctx, [
-    { texte: DECHARGE.libelleParticipant, police: `${tp}px "${DECHARGE.policeTexte}"`, couleur: p.couleur },
-    { texte: complet, police: `bold ${tp}px "${DECHARGE.policeTexte}"`, couleur: p.couleur },
+    { texte: DECHARGE.libelleParticipant, police: `${tp}px ${DECHARGE.policeTexte}`, couleur: p.couleur },
+    { texte: complet, police: `bold ${tp}px ${DECHARGE.policeTexte}`, couleur: p.couleur },
   ], pc(p.x, L), pc(p.y, H));
 
   // --- Ligne d'horodatage ---
   const d = DECHARGE.date;
   const td = Math.round(pc(d.taille, H));
   ligneCentree(ctx, [
-    { texte: formatHorodatage(date), police: `${td}px "${DECHARGE.policeTexte}"`, couleur: d.couleur },
+    { texte: formatHorodatage(date), police: `${td}px ${DECHARGE.policeTexte}`, couleur: d.couleur },
   ], pc(d.x, L), pc(d.y, H));
 
   // --- Signature manuscrite ---
   const s = DECHARGE.signature;
   const ts = taillePourTenir(
     ctx, complet,
-    `__T__px "${DECHARGE.policeSignature}"`,
+    `__T__px ${DECHARGE.policeSignature}`,
     Math.round(pc(s.taille, H)),
     pc(s.largeurMax, L),
   );
-  ctx.font = `${ts}px "${DECHARGE.policeSignature}"`;
+  appliquerPolice(ctx, `${ts}px ${DECHARGE.policeSignature}`);
   ctx.fillStyle = s.couleur;
   ctx.textAlign = 'center';
   ctx.fillText(complet, pc(s.x, L), pc(s.y, H));
