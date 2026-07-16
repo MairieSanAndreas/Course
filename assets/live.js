@@ -92,6 +92,12 @@ function dessiner() {
   dessinerCote(courses, vedette, parCourse);
 }
 
+/* Sur l'écran géant, la place est comptée : pilotes et entreprise
+   partagent une seule sous-ligne plutôt que d'en prendre deux. */
+function sousLigne(l) {
+  return [l.pilotes, l.entreprise_nom].filter(Boolean).map(echapper).join(' · ');
+}
+
 function dessinerScene(c, lignes) {
   const zone = $('#live-scene');
   const positions = memoriserPositions(zone);
@@ -120,7 +126,7 @@ function dessinerScene(c, lignes) {
             <div class="live-dossard">${l.dossard ?? '—'}</div>
             <div style="min-width:0">
               <div class="live-nom-p">${echapper(l.participant_nom)}</div>
-              ${l.entreprise_nom ? `<div class="live-ent">${echapper(l.entreprise_nom)}</div>` : ''}
+              ${sousLigne(l) ? `<div class="live-ent">${sousLigne(l)}</div>` : ''}
             </div>
             <div></div>
           </div>`).join('')}
@@ -142,7 +148,7 @@ function dessinerScene(c, lignes) {
           <div class="live-dossard">${l.dossard ?? '—'}</div>
           <div style="min-width:0">
             <div class="live-nom-p">${echapper(l.participant_nom)}</div>
-            ${l.entreprise_nom ? `<div class="live-ent">${echapper(l.entreprise_nom)}</div>` : ''}
+            ${sousLigne(l) ? `<div class="live-ent">${sousLigne(l)}</div>` : ''}
           </div>
           <div>
             ${l.abandon
