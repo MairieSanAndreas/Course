@@ -8,6 +8,7 @@
    RLS refusent l'écriture de toute façon (sql/02_rls.sql).
    ===================================================================== */
 
+import { telechargerDecharge, genererDecharge, pilotesDeLInscription } from './decharge.js';
 import {
   db, chargerCourses, chargerParticipants, chargerEntreprises,
   grouperParCourse, trierCourses, trierClassement, ecouter, surReveil, debounce,
@@ -469,6 +470,7 @@ function vueInscriptions() {
               </td>
               <td>
                 <div class="actions">
+                  <button class="btn-icone" data-decharge-doc="${i.id}" title="Décharge de responsabilité">📄</button>
                   <button class="btn-icone" data-editer="${i.id}" title="Modifier">✎</button>
                   <button class="btn-icone" data-supprimer="${i.id}" title="Supprimer">🗑</button>
                 </div>
@@ -535,6 +537,10 @@ function vueInscriptions() {
     };
   });
 
+  $$('[data-decharge-doc]').forEach((b) => {
+    b.onclick = () => modaleDecharge(etat.inscriptions.find((x) => x.id === b.dataset.dechargeDoc));
+  });
+
   $$('[data-editer]').forEach((b) => {
     b.onclick = () => modaleInscription(etat.inscriptions.find((x) => x.id === b.dataset.editer));
   });
@@ -555,6 +561,67 @@ function vueInscriptions() {
       }
     };
   });
+}
+
+/* Aperçu et téléchargement de la décharge.
+   L'horodatage est created_at : le moment exact où la personne a coché
+   la case sur le formulaire. C'est précisément ce que le document est
+   censé attester — inutile d'inventer une autre date. */
+function modaleDecharge(inscription) {
+  const pilotes = pilotesDeLInscription(inscription);
+  const date = new Date(inscription.created_at);
+
+  const { voile } = ouvrirModale({
+    titre: 'Décharge de responsabilité',
+    large: true,
+    bouton: pilotes.length > 1 ? 'Tout télécharger' : 'Télécharger',
+    contenu: `
+      <div class="decharge-note">
+        Horodatée au dépôt de l'inscription — ${formatDateHeure(inscription.created_at)}.
+        ${pilotes.length > 1
+          ? `Équipe de deux : une décharge par pilote, le document parle du « Participant » au singulier.`
+          : ''}
+      </div>
+      <div class="decharge-lot" data-lot>
+        <div class="chargement"><span class="spin"></span> Génération</div>
+      </div>`,
+    onValider: async () => {
+      for (const p of pilotes) {
+        await telechargerDecharge({ ...p, date });
+      }
+      notifier(`${pilotes.length} décharge(s) téléchargée(s)`, 'succes');
+      return true;
+    },
+  });
+
+  // Rendu après ouverture : générer prend un instant, la modale ne doit
+  // pas attendre pour s'afficher.
+  (async () => {
+    const lot = voile.querySelector('[data-lot]');
+    try {
+      const blocs = [];
+      for (const p of pilotes) {
+        const canvas = await genererDecharge({ ...p, date });
+        const item = document.createElement('div');
+        item.className = 'decharge-item';
+        item.appendChild(canvas);
+        const pied = document.createElement('div');
+        pied.className = 'decharge-pied';
+        pied.innerHTML = `<span class="decharge-nom">${echapper(p.prenom)} ${echapper(p.nom)}</span>`;
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-mini pousse';
+        btn.textContent = 'Télécharger';
+        btn.onclick = () => telechargerDecharge({ ...p, date });
+        pied.appendChild(btn);
+        item.appendChild(pied);
+        blocs.push(item);
+      }
+      lot.innerHTML = '';
+      blocs.forEach((b) => lot.appendChild(b));
+    } catch (e) {
+      lot.innerHTML = `<p class="erreur-champ">${echapper(e.message)}</p>`;
+    }
+  })();
 }
 
 function modaleInscription(inscription) {
