@@ -12,6 +12,7 @@ import {
   memoriserPositions, animerVersNouvellesPositions,
 } from './api.js';
 import { EVENEMENT } from './config.js';
+import { telechargerDecharge, pilotesDeLInscription } from './decharge.js';
 
 /* État local — reflet de la base, jamais la source de vérité. */
 const etat = {
@@ -205,6 +206,30 @@ function validerFormulaire() {
   return erreurs;
 }
 
+function proposerDecharge(pilotes, date) {
+  const zone = $('#decharge-zone');
+  zone.innerHTML = '';
+
+  for (const p of pilotes) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-or';
+    btn.textContent = pilotes.length > 1
+      ? `Décharge — ${p.prenom} ${p.nom}`
+      : 'Télécharger ma décharge';
+    btn.onclick = async () => {
+      btn.disabled = true;
+      try {
+        await telechargerDecharge({ ...p, date });
+      } catch (e) {
+        notifier(e.message, 'erreur');
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    zone.appendChild(btn);
+  }
+}
+
 async function envoyerInscription() {
   const erreurs = validerFormulaire();
   const zone = $('#i-erreur');
@@ -248,6 +273,17 @@ async function envoyerInscription() {
     zone.textContent = messageErreur(error);
     return;
   }
+
+  // RLS interdit au public de relire l'inscription : on ne peut pas
+  // récupérer created_at. On prend l'heure locale d'envoi — écart de
+  // quelques millisecondes, sans conséquence. Côté panel, c'est bien
+  // created_at qui fait foi.
+  proposerDecharge(pilotesDeLInscription({
+    prenom: $('#i-prenom').value.trim(),
+    nom: $('#i-nom').value.trim(),
+    p2_prenom: duo ? $('#i-p2-prenom').value.trim() : null,
+    p2_nom: duo ? $('#i-p2-nom').value.trim() : null,
+  }), new Date());
 
   $('#inscription-form').hidden = true;
   $('#inscription-ok').hidden = false;
