@@ -34,6 +34,12 @@ const etat = {
 
 const estAdmin = () => etat.profil?.role === 'admin';
 
+const LIBELLE_STATUT_INSCRIPTION = {
+  en_attente: 'En attente',
+  validee: 'Validée',
+  refusee: 'Refusée',
+};
+
 
 /* =====================================================================
    1. AUTHENTIFICATION
@@ -335,7 +341,7 @@ function vueBord() {
               </div>
             </div>
             <span class="mini-badge ${i.statut === 'validee' ? 'ok' : i.statut === 'refusee' ? 'ko' : 'attente'}">
-              ${i.statut === 'validee' ? 'Validée' : i.statut === 'refusee' ? 'Refusée' : 'En attente'}
+              ${LIBELLE_STATUT_INSCRIPTION[i.statut]}
             </span>
           </div>`).join('')
         : '<p style="color:var(--texte-3);font-size:14px">Aucune inscription pour le moment.</p>'}
@@ -417,7 +423,8 @@ function vueInscriptions() {
 
     <p class="aide" style="margin-bottom:14px">
       <strong style="color:var(--texte)">${lignes.length}</strong> inscription(s) affichée(s)
-      sur ${etat.inscriptions.length} · Engagés par course — ${repartition || 'aucune course'}
+      sur ${etat.inscriptions.length} · Statut et décharge se modifient directement dans le tableau
+      · Engagés par course — ${repartition || 'aucune course'}
     </p>
 
     ${lignes.length ? `
@@ -454,9 +461,11 @@ function vueInscriptions() {
                 </button>
               </td>
               <td>
-                <span class="mini-badge ${i.statut === 'validee' ? 'ok' : i.statut === 'refusee' ? 'ko' : 'attente'}">
-                  ${i.statut === 'validee' ? 'Validée' : i.statut === 'refusee' ? 'Refusée' : 'En attente'}
-                </span>
+                <select class="statut-inline ${i.statut}" data-statut-inscription="${i.id}">
+                  <option value="en_attente" ${i.statut === 'en_attente' ? 'selected' : ''}>En attente</option>
+                  <option value="validee"    ${i.statut === 'validee' ? 'selected' : ''}>Validée</option>
+                  <option value="refusee"    ${i.statut === 'refusee' ? 'selected' : ''}>Refusée</option>
+                </select>
               </td>
               <td>
                 <div class="actions">
@@ -508,6 +517,21 @@ function vueInscriptions() {
         .update({ decharge_validee: !i.decharge_validee }).eq('id', i.id);
       if (error) notifier(messageErreur(error), 'erreur');
       else await rafraichir();
+    };
+  });
+
+  // Statut modifiable sur place : c'est le geste le plus répété avant
+  // l'événement. Un select plutôt qu'un bouton qui bascule — avec trois
+  // états, un clic de trop refuserait quelqu'un par accident.
+  $$('[data-statut-inscription]').forEach((sel) => {
+    sel.onchange = async () => {
+      const id = sel.dataset.statutInscription;
+      const i = etat.inscriptions.find((x) => x.id === id);
+      const { error } = await db.from('inscriptions')
+        .update({ statut: sel.value }).eq('id', id);
+      if (error) notifier(messageErreur(error), 'erreur');
+      else notifier(`${i.nom_equipe} — ${LIBELLE_STATUT_INSCRIPTION[sel.value]}`, 'succes');
+      await rafraichir();
     };
   });
 
