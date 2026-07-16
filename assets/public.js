@@ -12,7 +12,6 @@ import {
   memoriserPositions, animerVersNouvellesPositions,
 } from './api.js';
 import { EVENEMENT } from './config.js';
-import { telechargerDecharge, pilotesDeLInscription } from './decharge.js';
 
 /* État local — reflet de la base, jamais la source de vérité. */
 const etat = {
@@ -206,9 +205,23 @@ function validerFormulaire() {
   return erreurs;
 }
 
-function proposerDecharge(pilotes, date) {
+/* Import a la demande, apres un envoi reussi. Si decharge.js manque, on
+   n'affiche simplement pas les boutons : l'inscription est enregistree,
+   c'est ce qui compte. Le formulaire ne doit pas tomber pour un
+   document annexe. */
+async function proposerDecharge(inscription, date) {
   const zone = $('#decharge-zone');
   zone.innerHTML = '';
+
+  let D;
+  try {
+    D = await import('./decharge.js');
+  } catch {
+    zone.closest('.vide')?.querySelectorAll('p')[1]?.remove();
+    return;
+  }
+
+  const pilotes = D.pilotesDeLInscription(inscription);
 
   for (const p of pilotes) {
     const btn = document.createElement('button');
@@ -219,7 +232,7 @@ function proposerDecharge(pilotes, date) {
     btn.onclick = async () => {
       btn.disabled = true;
       try {
-        await telechargerDecharge({ ...p, date });
+        await D.telechargerDecharge({ ...p, date });
       } catch (e) {
         notifier(e.message, 'erreur');
       } finally {
@@ -278,12 +291,12 @@ async function envoyerInscription() {
   // récupérer created_at. On prend l'heure locale d'envoi — écart de
   // quelques millisecondes, sans conséquence. Côté panel, c'est bien
   // created_at qui fait foi.
-  proposerDecharge(pilotesDeLInscription({
+  proposerDecharge({
     prenom: $('#i-prenom').value.trim(),
     nom: $('#i-nom').value.trim(),
     p2_prenom: duo ? $('#i-p2-prenom').value.trim() : null,
     p2_nom: duo ? $('#i-p2-nom').value.trim() : null,
-  }), new Date());
+  }, new Date());
 
   $('#inscription-form').hidden = true;
   $('#inscription-ok').hidden = false;
