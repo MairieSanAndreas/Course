@@ -104,6 +104,19 @@
         </div>
 
         <!-- Second participant : duo et entreprise -->
+        <div class="champ">
+          <label for="i-discord">@ Discord <span style="color:var(--texte-3);font-weight:500;
+            letter-spacing:0">— Intranet</span> <span class="oblig">*</span></label>
+          <div style="display:flex;gap:8px;align-items:stretch">
+            <input type="text" id="i-discord" maxlength="60" placeholder="pseudo" style="flex:1">
+            <a href="#" id="lien-intranet" target="_blank" rel="noopener" class="btn"
+               style="white-space:nowrap">Rejoindre ↗</a>
+          </div>
+          <p class="aide" id="aide-discord">
+            Ton @ sert à t'ajouter au salon <strong>Participants</strong> de l'Intranet : c'est là que passent toutes les informations de la course. Pas encore sur le Discord de la Mairie ? Le bouton t'y emmène.
+          </p>
+        </div>
+
         <div id="bloc-p2" hidden>
           <p class="eyebrow" style="margin:24px 0 12px">Second participant</p>
           <div class="grille grille-2">
@@ -116,9 +129,16 @@
               <input type="text" id="i-p2-nom" maxlength="60">
             </div>
           </div>
-          <div class="champ">
-            <label for="i-p2-tel">Téléphone <span class="oblig">*</span></label>
-            <input type="tel" id="i-p2-tel" maxlength="20" placeholder="555-0000">
+          <div class="grille grille-2">
+            <div class="champ">
+              <label for="i-p2-tel">Téléphone <span class="oblig">*</span></label>
+              <input type="tel" id="i-p2-tel" maxlength="20" placeholder="555-0000">
+            </div>
+            <div class="champ">
+              <label for="i-p2-discord">@ Discord</label>
+              <input type="text" id="i-p2-discord" maxlength="60" placeholder="pseudo">
+              <p class="aide">Ajouté au salon Participants lui aussi.</p>
+            </div>
           </div>
         </div>
 
