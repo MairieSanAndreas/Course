@@ -60,6 +60,7 @@ function appliquerConfig() {
   $('#pied-event').textContent = `${EVENEMENT.nom} — ${EVENEMENT.organisation}`;
   $('#lien-reglement').href = EVENEMENT.lienReglement;
   $('#lien-decharge').href = EVENEMENT.lienDecharge;
+  $('#lien-intranet').href = EVENEMENT.lienIntranet;
   document.title = `${EVENEMENT.nom} — ${EVENEMENT.lieu} | ${EVENEMENT.organisation}`;
 }
 
@@ -120,6 +121,12 @@ function brancherFormulaire() {
       // Duo et entreprise engagent deux personnes ; solo, une seule.
       $('#bloc-p2').hidden = etat.categorie === 'solo';
       $('#bloc-entreprise').hidden = etat.categorie !== 'entreprise';
+
+      // A deux, un seul Discord suffit : le dire, plutot que de laisser
+      // l'etoile obligatoire faire croire aux deux.
+      $('#aide-discord').textContent = etat.categorie === 'solo'
+        ? "Ton @ sert à t'ajouter au salon Participants de l'Intranet : c'est là que passent toutes les informations de la course. Pas encore sur le Discord de la Mairie ? Le bouton t'y emmène."
+        : "Au moins un des deux. Chaque @ renseigné est ajouté au salon Participants de l'Intranet, où passent toutes les informations de la course — donnez les deux pour que personne ne rate rien.";
     };
   });
 
@@ -167,7 +174,8 @@ function remplirSelects() {
 }
 
 function viderFormulaire() {
-  ['i-prenom', 'i-nom', 'i-tel', 'i-equipe', 'i-p2-prenom', 'i-p2-nom', 'i-p2-tel']
+  ['i-prenom', 'i-nom', 'i-tel', 'i-discord', 'i-equipe',
+   'i-p2-prenom', 'i-p2-nom', 'i-p2-tel', 'i-p2-discord']
     .forEach((id) => { $(`#${id}`).value = ''; $(`#${id}`).removeAttribute('aria-invalid'); });
   ['i-costume', 'i-reglement', 'i-decharge'].forEach((id) => { $(`#${id}`).checked = false; });
   $('#i-entreprise').value = '';
@@ -192,10 +200,19 @@ function validerFormulaire() {
   requis('i-tel', 'Téléphone');
   requis('i-equipe', "Nom d'équipe");
 
-  if (etat.categorie !== 'solo') {
+  if (etat.categorie === 'solo') {
+    requis('i-discord', 'Discord');
+  } else {
     requis('i-p2-prenom', 'Prénom du second participant');
     requis('i-p2-nom', 'Nom du second participant');
     requis('i-p2-tel', 'Téléphone du second participant');
+
+    // A deux : au moins un Discord. La contrainte discord_requis en base
+    // dit exactement la meme chose — ici c'est juste pour le confort.
+    const aucun = !$('#i-discord').value.trim() && !$('#i-p2-discord').value.trim();
+    $('#i-discord').setAttribute('aria-invalid', String(aucun));
+    $('#i-p2-discord').setAttribute('aria-invalid', String(aucun));
+    if (aucun) erreurs.push('Discord (au moins un des deux participants)');
   }
   if (etat.categorie === 'entreprise') requis('i-entreprise', 'Entreprise');
 
@@ -265,6 +282,7 @@ async function envoyerInscription() {
     prenom: $('#i-prenom').value.trim(),
     nom: $('#i-nom').value.trim(),
     telephone: $('#i-tel').value.trim(),
+    discord: $('#i-discord').value.trim() || null,
     nom_equipe: $('#i-equipe').value.trim(),
     costume: $('#i-costume').checked,
     categorie: etat.categorie,
@@ -272,6 +290,7 @@ async function envoyerInscription() {
     p2_prenom: duo ? $('#i-p2-prenom').value.trim() : null,
     p2_nom: duo ? $('#i-p2-nom').value.trim() : null,
     p2_telephone: duo ? $('#i-p2-tel').value.trim() : null,
+    p2_discord: duo ? ($('#i-p2-discord').value.trim() || null) : null,
     reglement_ok: true,
     decharge_ok: true,
     statut: 'en_attente',

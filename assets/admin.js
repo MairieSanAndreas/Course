@@ -382,7 +382,8 @@ function filtrerInscriptions() {
     if (statut && i.statut !== statut) return false;
     if (entreprise && i.entreprise_id !== entreprise) return false;
     if (!recherche) return true;
-    return [i.prenom, i.nom, i.nom_equipe, i.telephone, i.p2_prenom, i.p2_nom, i.entreprises?.nom]
+    return [i.prenom, i.nom, i.nom_equipe, i.telephone, i.discord,
+            i.p2_prenom, i.p2_nom, i.p2_discord, i.entreprises?.nom]
       .filter(Boolean).join(' ').toLowerCase().includes(recherche);
   });
 }
@@ -399,7 +400,7 @@ function vueInscriptions() {
   $('#vue').innerHTML = `
     <div class="outils">
       <div class="recherche">
-        <input type="text" id="f-recherche" placeholder="Nom, équipe, téléphone…">
+        <input type="text" id="f-recherche" placeholder="Nom, équipe, téléphone, Discord…">
       </div>
       <select id="f-categorie" style="width:auto">
         <option value="">Toutes catégories</option>
@@ -432,7 +433,7 @@ function vueInscriptions() {
       <table class="tbl">
         <thead>
           <tr>
-            <th>Équipe</th><th>Participant(s)</th><th>Téléphone</th>
+            <th>Équipe</th><th>Participant(s)</th><th>Téléphone</th><th>@ Discord</th>
             <th>Catégorie</th><th>Entreprise</th><th>Décharge</th>
             <th>Statut</th><th></th>
           </tr>
@@ -451,6 +452,11 @@ function vueInscriptions() {
               <td style="font-family:var(--f-chrono);font-size:12px;color:var(--texte-2)">
                 ${echapper(i.telephone)}
                 ${i.p2_telephone ? `<div>${echapper(i.p2_telephone)}</div>` : ''}
+              </td>
+              <td style="font-size:13px">
+                ${i.discord ? `<div style="font-weight:600">${echapper(i.discord)}</div>` : ''}
+                ${i.p2_discord ? `<div style="color:var(--texte-3)">${echapper(i.p2_discord)}</div>` : ''}
+                ${!i.discord && !i.p2_discord ? '<span style="color:var(--texte-3)">—</span>' : ''}
               </td>
               <td><span class="mini-badge">${LIBELLE_CATEGORIE[i.categorie]}</span></td>
               <td style="font-size:13px;color:var(--texte-2)">${echapper(i.entreprises?.nom ?? '—')}</td>
@@ -499,11 +505,13 @@ function vueInscriptions() {
     { titre: 'Prénom', valeur: (i) => i.prenom },
     { titre: 'Nom', valeur: (i) => i.nom },
     { titre: 'Téléphone', valeur: (i) => i.telephone },
+    { titre: '@ Discord', valeur: (i) => i.discord ?? '' },
     { titre: 'Catégorie', valeur: (i) => i.categorie },
     { titre: 'Entreprise', valeur: (i) => i.entreprises?.nom ?? '' },
     { titre: 'Prénom 2', valeur: (i) => i.p2_prenom ?? '' },
     { titre: 'Nom 2', valeur: (i) => i.p2_nom ?? '' },
     { titre: 'Téléphone 2', valeur: (i) => i.p2_telephone ?? '' },
+    { titre: '@ Discord 2', valeur: (i) => i.p2_discord ?? '' },
     { titre: 'Costume', valeur: (i) => (i.costume ? 'Oui' : 'Non') },
     { titre: 'Décharge reçue', valeur: (i) => (i.decharge_validee ? 'Oui' : 'Non') },
     { titre: 'Statut', valeur: (i) => i.statut },
@@ -681,6 +689,13 @@ function modaleInscription(inscription) {
           <input type="tel" id="m-tel" value="${echapper(i.telephone ?? '')}" maxlength="20"></div>
       </div>
 
+      <div class="champ">
+        <label for="m-discord">@ Discord (Intranet)</label>
+        <input type="text" id="m-discord" value="${echapper(i.discord ?? '')}" maxlength="60">
+        <p class="aide">Au moins un Discord par inscription — celui-ci ou celui du second participant.
+           Sert à ajouter les pilotes au salon Participants de l'Intranet.</p>
+      </div>
+
       <div id="m-bloc-p2" ${i.categorie === 'solo' ? 'hidden' : ''}>
         <p class="eyebrow" style="margin:8px 0 12px">Second participant</p>
         <div class="grille grille-3">
@@ -690,6 +705,10 @@ function modaleInscription(inscription) {
             <input type="text" id="m-p2-nom" value="${echapper(i.p2_nom ?? '')}" maxlength="60"></div>
           <div class="champ"><label for="m-p2-tel">Téléphone *</label>
             <input type="tel" id="m-p2-tel" value="${echapper(i.p2_telephone ?? '')}" maxlength="20"></div>
+        </div>
+        <div class="champ">
+          <label for="m-p2-discord">@ Discord du second participant</label>
+          <input type="text" id="m-p2-discord" value="${echapper(i.p2_discord ?? '')}" maxlength="60">
         </div>
       </div>
 
@@ -718,6 +737,8 @@ function modaleInscription(inscription) {
       if (!v('m-tel')) manque.push('téléphone');
       if (duo && (!v('m-p2-prenom') || !v('m-p2-nom') || !v('m-p2-tel'))) manque.push('second participant');
       if (categorie === 'entreprise' && !$('#m-entreprise', corps).value) manque.push('entreprise');
+      // Miroir exact de la contrainte discord_requis en base.
+      if (!v('m-discord') && !(duo && v('m-p2-discord'))) manque.push('@ Discord');
 
       if (manque.length) {
         err.hidden = false;
@@ -727,11 +748,13 @@ function modaleInscription(inscription) {
 
       const donnees = {
         prenom: v('m-prenom'), nom: v('m-nom'), telephone: v('m-tel'),
+        discord: v('m-discord') || null,
         nom_equipe: v('m-equipe'), categorie,
         entreprise_id: categorie === 'entreprise' ? $('#m-entreprise', corps).value : null,
         p2_prenom: duo ? v('m-p2-prenom') : null,
         p2_nom: duo ? v('m-p2-nom') : null,
         p2_telephone: duo ? v('m-p2-tel') : null,
+        p2_discord: duo ? (v('m-p2-discord') || null) : null,
         costume: $('#m-costume', corps).checked,
         decharge_validee: $('#m-decharge', corps).checked,
         statut: $('#m-statut', corps).value,

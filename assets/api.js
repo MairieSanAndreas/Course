@@ -414,7 +414,21 @@ export function messageErreur(e) {
   const brut = e?.message ?? String(e);
 
   if (code === '23505') return 'Cette valeur existe déjà. Vérifie les dossards et les doublons.';
-  if (code === '23514') return 'Les données ne respectent pas une règle de la base. Vérifie la saisie.';
+  if (code === '23514') {
+    if (brut.includes('discord_requis')) {
+      return 'Il faut au moins un @ Discord — celui du participant ou celui du second.';
+    }
+    if (brut.includes('duo_exige_second_participant')) {
+      return 'Une inscription duo ou entreprise exige un second participant complet.';
+    }
+    if (brut.includes('entreprise_exige_entreprise')) {
+      return 'Une inscription entreprise doit désigner une entreprise.';
+    }
+    if (brut.includes('temps_ou_abandon')) {
+      return 'Un participant a soit un temps, soit un abandon — jamais les deux.';
+    }
+    return 'Les données ne respectent pas une règle de la base. Vérifie la saisie.';
+  }
   if (code === '42501' || brut.includes('row-level security')) {
     return "Ton compte n'a pas le droit d'effectuer cette action.";
   }

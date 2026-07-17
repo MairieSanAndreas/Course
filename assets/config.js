@@ -32,6 +32,10 @@ export const EVENEMENT = {
   // ils peuvent modifier le document.
   lienReglement: '#',
   lienDecharge: 'https://docs.google.com/presentation/d/1JeFwdCrhcxxrKLsPluhkWY9hKdkmaFDkik8Gy9raIfI/preview',
+
+  // Intranet de la Mairie — le Discord. Bouton a cote du champ @ Discord
+  // du formulaire, pour ceux qui n'ont pas encore rejoint.
+  lienIntranet: 'https://discord.gg/pfBawzUMXh',
 };
 
 
