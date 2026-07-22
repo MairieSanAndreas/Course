@@ -754,6 +754,113 @@ input[aria-invalid='true'], select[aria-invalid='true'] { border-color: var(--da
 }
 
 /* =====================================================================
+   12c. DOCUMENT (règlement)
+   Colonne étroite, interlignage généreux : 39 articles doivent rester
+   lisibles sur un téléphone à 1 h du matin.
+   ===================================================================== */
+
+.modale-doc { max-width: 720px; }
+.modale-doc .modale-corps { padding: var(--e6) var(--e5); }
+
+.doc-sur {
+  font-family: var(--f-titre);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--or-sombre);
+  text-align: center;
+}
+
+.doc-titre {
+  font-family: var(--f-titre);
+  font-size: clamp(18px, 3.4vw, 24px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: var(--e3) 0 var(--e2);
+  line-height: 1.25;
+}
+
+.doc-compteur {
+  text-align: center;
+  font-size: 12px;
+  color: var(--texte-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding-bottom: var(--e5);
+  border-bottom: 1px solid var(--trait);
+}
+
+.doc-chapitre { margin-top: var(--e6); }
+
+.doc-chapitre-titre {
+  font-family: var(--f-titre);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--or);
+  padding-bottom: var(--e2);
+  margin-bottom: var(--e4);
+  border-bottom: 1px solid color-mix(in srgb, var(--or) 25%, transparent);
+}
+
+.doc-article {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--texte-2);
+  margin-bottom: var(--e4);
+  max-width: 62ch;
+}
+
+/* Le numéro d'article se repère d'un coup d'œil : c'est comme ça qu'on
+   cite une règle sur la ligne de départ. */
+.doc-art-num {
+  display: inline-block;
+  min-width: 62px;
+  font-family: var(--f-chrono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--or);
+  letter-spacing: 0.04em;
+}
+
+.doc-signature {
+  margin-top: var(--e7);
+  padding-top: var(--e5);
+  border-top: 1px solid var(--trait);
+  text-align: right;
+}
+
+.doc-sign-nom {
+  font-family: 'Dancing Script', cursive;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--texte);
+  line-height: 1.1;
+}
+
+.doc-sign-fonction {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--or);
+  margin-top: var(--e2);
+}
+
+.doc-sign-org { font-size: 12px; color: var(--texte-3); margin-top: 2px; }
+
+@media (max-width: 720px) {
+  .doc-article { font-size: 14px; }
+  .doc-art-num { display: block; min-width: 0; margin-bottom: 2px; }
+  .modale-doc .modale-corps { padding: var(--e5) var(--e4); }
+}
+
+/* =====================================================================
    13. NOTIFICATIONS
    ===================================================================== */
 
