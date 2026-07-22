@@ -58,7 +58,19 @@ async function demarrer() {
 function appliquerConfig() {
   $('#sous-titre').textContent = `${EVENEMENT.lieu} — ${EVENEMENT.date}`;
   $('#pied-event').textContent = `${EVENEMENT.nom} — ${EVENEMENT.organisation}`;
-  $('#lien-reglement').href = EVENEMENT.lienReglement;
+  // Le reglement est dans le site, pas derriere un lien externe : on
+  // ouvre la fenetre au lieu de naviguer. Import a la demande — un
+  // fichier de 39 articles n'a pas a etre charge pour afficher le
+  // programme des courses.
+  $('#lien-reglement').onclick = async (e) => {
+    e.preventDefault();
+    try {
+      const { ouvrirReglement } = await import('./reglement.js');
+      ouvrirReglement();
+    } catch {
+      notifier('Règlement momentanément indisponible (assets/reglement.js).', 'erreur');
+    }
+  };
   $('#lien-decharge').href = EVENEMENT.lienDecharge;
   $('#lien-intranet').href = EVENEMENT.lienIntranet;
   document.title = `${EVENEMENT.nom} — ${EVENEMENT.lieu} | ${EVENEMENT.organisation}`;

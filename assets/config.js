@@ -30,7 +30,9 @@ export const EVENEMENT = {
   // ⚠️ Google Slides : utiliser /preview et NON /edit. /edit demande une
   // autorisation aux joueurs, et si le partage est ouvert en ecriture,
   // ils peuvent modifier le document.
-  lienReglement: '#',
+  // Le reglement n'est plus un lien : son texte vit dans
+  // assets/reglement.js et s'affiche dans une fenetre du site.
+  // Pour le modifier, editer ce fichier — rien a faire ici.
   lienDecharge: 'https://docs.google.com/presentation/d/1JeFwdCrhcxxrKLsPluhkWY9hKdkmaFDkik8Gy9raIfI/preview',
 
   // Intranet de la Mairie — le Discord. Bouton a cote du champ @ Discord
