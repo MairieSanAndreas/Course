@@ -14,7 +14,7 @@ import {
   formatTemps, parseTemps, formatEcart, formatDate, formatDateCourte,
   formatHeure, formatDateHeure,
   LIBELLE_STATUT, LIBELLE_TYPE, LIBELLE_CATEGORIE, echapper, celluleEquipe, notifier, messageErreur,
-  confirmer, ouvrirModale,
+  confirmer, ouvrirModale, inscriptionsOuvertes, definirInscriptions,
 } from './api.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -139,7 +139,7 @@ async function ouvrirSession(session) {
 
   const redessiner = debounce(async () => { await charger(); dessiner(); }, 220);
   ecouter(
-    ['courses', 'participants', 'resultats', 'inscriptions', 'entreprises', 'historique'],
+    ['courses', 'participants', 'resultats', 'inscriptions', 'entreprises', 'historique', 'parametres'],
     redessiner,
     (connecte) => {
       const t = $('#temoin-direct');
@@ -175,6 +175,8 @@ async function charger() {
     const { data } = await db.from('profils').select('*').order('nom');
     etat.profils = data ?? [];
   }
+
+  etat.inscriptionsOuvertes = await inscriptionsOuvertes();
 
   $('#n-inscriptions').textContent = inscriptions.length;
   $('#n-courses').textContent = courses.length;
@@ -397,7 +399,17 @@ function vueInscriptions() {
     .map((c) => `${echapper(c.nom)} : ${(parCourse.get(c.id) ?? []).length}`)
     .join(' · ');
 
+  const ouv = etat.inscriptionsOuvertes;
   $('#vue').innerHTML = `
+    <div class="verrou ${ouv ? 'ouvert' : 'ferme'}" style="border-radius:var(--r-m);margin-bottom:16px">
+      <span>${ouv
+        ? '● Inscriptions ouvertes — le public peut déposer une inscription'
+        : '● Inscriptions fermées — le formulaire public est bloqué'}</span>
+      <button class="btn btn-mini ${ouv ? 'btn-danger' : 'btn-succes'} pousse" id="btn-inscriptions">
+        ${ouv ? 'Fermer les inscriptions' : 'Ouvrir les inscriptions'}
+      </button>
+    </div>
+
     <div class="outils">
       <div class="recherche">
         <input type="text" id="f-recherche" placeholder="Nom, équipe, téléphone, Discord…">
@@ -498,6 +510,27 @@ function vueInscriptions() {
     el.value = etat.filtres[f];
     el.onchange = () => { etat.filtres[f] = el.value; dessiner(); };
   });
+
+  $('#btn-inscriptions').onclick = async () => {
+    const fermer = etat.inscriptionsOuvertes;
+    const ok = await confirmer({
+      titre: fermer ? 'Fermer les inscriptions' : 'Ouvrir les inscriptions',
+      message: fermer
+        ? 'Le formulaire public sera immédiatement bloqué. Personne ne pourra plus déposer d’inscription tant que tu ne rouvres pas.<br><br>Toi et les opérateurs pourrez toujours en ajouter à la main.'
+        : 'Le formulaire public redevient accessible : n’importe qui pourra déposer une inscription.',
+      bouton: fermer ? 'Fermer' : 'Ouvrir',
+      danger: fermer,
+    });
+    if (!ok) return;
+    try {
+      await definirInscriptions(!fermer);
+      etat.inscriptionsOuvertes = !fermer;
+      notifier(fermer ? 'Inscriptions fermées' : 'Inscriptions ouvertes', 'succes');
+      dessiner();
+    } catch (e) {
+      notifier(messageErreur(e), 'erreur');
+    }
+  };
 
   $('#btn-ajouter').onclick = () => modaleInscription(null);
   $('#btn-csv').onclick = () => exporterCSV('inscriptions', [

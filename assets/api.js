@@ -203,6 +203,19 @@ export async function chargerParticipants() {
   return data;
 }
 
+export async function inscriptionsOuvertes() {
+  const { data, error } = await db
+    .from('parametres').select('valeur').eq('cle', 'inscriptions_ouvertes').maybeSingle();
+  if (error) return true;               // en cas de doute, on n'empêche pas
+  return data?.valeur !== false;
+}
+
+export async function definirInscriptions(ouvertes) {
+  const { error } = await db.from('parametres')
+    .update({ valeur: ouvertes }).eq('cle', 'inscriptions_ouvertes');
+  if (error) throw error;
+}
+
 export async function chargerEntreprises() {
   const { data, error } = await db.from('entreprises').select('*').order('nom');
   if (error) throw error;

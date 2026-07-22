@@ -6,6 +6,7 @@
 
 import {
   db, chargerCourses, chargerParticipants, chargerEntreprises, chargerClassementGeneral,
+  inscriptionsOuvertes,
   grouperParCourse, trierCourses, trierClassement, ecouter, surReveil, debounce,
   formatTemps, formatEcart, formatDate, formatDateCourte, formatHeure,
   LIBELLE_STATUT, LIBELLE_TYPE, echapper, celluleEquipe, notifier, messageErreur,
@@ -42,7 +43,7 @@ async function demarrer() {
   // Temps réel : la moindre écriture en base redessine les vues.
   const redessiner = debounce(rafraichir, 200);
   ecouter(
-    ['courses', 'participants', 'resultats', 'entreprises'],
+    ['courses', 'participants', 'resultats', 'entreprises', 'parametres'],
     redessiner,
     (connecte) => {
       const t = $('#temoin-direct');
@@ -73,21 +74,26 @@ function appliquerConfig() {
   };
   $('#lien-decharge').href = EVENEMENT.lienDecharge;
   $('#lien-intranet').href = EVENEMENT.lienIntranet;
+  const li = $('#lien-intranet-ferme');
+  if (li) li.href = EVENEMENT.lienIntranet;
   document.title = `${EVENEMENT.nom} — ${EVENEMENT.lieu} | ${EVENEMENT.organisation}`;
 }
 
 async function rafraichir() {
   try {
-    const [courses, participants, entreprises, general] = await Promise.all([
+    const [courses, participants, entreprises, general, ouvertes] = await Promise.all([
       chargerCourses(),
       chargerParticipants(),
       chargerEntreprises(),
       chargerClassementGeneral(),
+      inscriptionsOuvertes(),
     ]);
     etat.courses = courses;
     etat.participants = participants;
     etat.entreprises = entreprises;
     etat.general = general;
+    etat.inscriptionsOuvertes = ouvertes;
+    majEtatInscriptions();
 
     dessinerCourses();
     dessinerGeneral();
@@ -110,6 +116,24 @@ function brancherOnglets() {
   // Lien direct : index.html#courses
   const cible = location.hash.slice(1);
   if (['inscription', 'courses', 'classement'].includes(cible)) afficherOnglet(cible);
+}
+
+function majEtatInscriptions() {
+  const form = document.querySelector('#inscription-form');
+  const ok = document.querySelector('#inscription-ok');
+  const ferme = document.querySelector('#inscription-fermee');
+  if (!ferme) return;
+
+  if (etat.inscriptionsOuvertes) {
+    ferme.hidden = true;
+    // On ne réaffiche le formulaire que si on n'est pas sur l'écran
+    // de confirmation d'un envoi réussi.
+    if (ok.hidden) form.hidden = false;
+  } else {
+    form.hidden = true;
+    ok.hidden = true;
+    ferme.hidden = false;
+  }
 }
 
 function afficherOnglet(nom) {
@@ -273,6 +297,10 @@ async function proposerDecharge(inscription, date) {
 }
 
 async function envoyerInscription() {
+  if (!etat.inscriptionsOuvertes) {
+    majEtatInscriptions();
+    return;
+  }
   const erreurs = validerFormulaire();
   const zone = $('#i-erreur');
 
